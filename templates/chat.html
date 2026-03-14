@@ -1,0 +1,1097 @@
+{% extends "base.html" %}
+
+{% block title %}Чат - LocalChat{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="chat-layout">
+    <div class="chat-sidebar">
+        <div class="sidebar-header">
+            <div class="user-profile" onclick="toggleSettings()">
+                <img src="" alt="" class="user-avatar" id="current-user-avatar">
+                <div class="user-info">
+                    <div class="user-name" id="current-user-nickname">Загрузка...</div>
+                    <div class="user-status">● В сети</div>
+                </div>
+                <button class="btn-logout" onclick="logout()" title="Выйти">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="search-box">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" placeholder="Поиск по ID, @username..." id="user-search">
+            <div class="search-results" id="search-results"></div>
+        </div>
+        <div class="chat-list" id="users-list"></div>
+    </div>
+
+    <div class="chat-main">
+        <div class="chat-header">
+            <div class="chat-info">
+                <h2 id="room-name">Global Room</h2>
+                <div class="chat-status" id="room-status">@global</div>
+            </div>
+            <div class="chat-actions">
+                <a href="https://github.com/Aurum2347/LocalChat" target="_blank" class="btn-info" title="Информация о проекте">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                </a>
+                <button class="btn-icon" onclick="toggleSettings()" title="Настройки">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="messages-container" id="messages-container">
+            <div class="empty-state">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <p>История пуста</p>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typing-indicator">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            <span id="typing-text">кто-то печатает...</span>
+        </div>
+
+        <div class="attached-files-preview" id="attached-files-preview"></div>
+
+        <div class="upload-progress-container" id="upload-progress-container" style="display: none;">
+            <div class="upload-progress-header">
+                <span>Загрузка файлов...</span>
+                <span id="upload-progress-text">0%</span>
+            </div>
+            <div class="upload-progress-bar">
+                <div class="upload-progress-fill" id="upload-progress-fill"></div>
+            </div>
+        </div>
+
+        <div class="message-input-area">
+            <input type="file" id="file-input" multiple hidden onchange="handleFileSelect(event)">
+            <button class="btn-icon btn-attach" onclick="document.getElementById('file-input').click()" title="Прикрепить файл">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                </svg>
+            </button>
+            <div class="input-wrapper">
+                <input type="text" id="message-input" placeholder="Напишите сообщение..." autocomplete="off">
+                <button class="btn-emoji" onclick="toggleEmojiPicker()" title="Эмодзи">😊</button>
+            </div>
+            <button class="btn-send" onclick="sendMessage()" title="Отправить" id="btn-send">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="2" x2="11" y2="13"/>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="toggleSettings()"></div>
+
+<div class="settings-panel" id="settings-panel">
+    <div class="settings-header">
+        <h3>Профиль</h3>
+        <button class="btn-icon" onclick="toggleSettings()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+    </div>
+    <div class="settings-content">
+        <div class="profile-edit">
+            <div class="avatar-edit">
+                <img src="" class="edit-avatar" id="settings-avatar">
+                <label for="avatar-input" class="btn-avatar-change">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                </label>
+                <input type="file" id="avatar-input" hidden accept="image/*" onchange="uploadAvatar(event)">
+            </div>
+            <div class="username-edit">
+                <label>Никнейм</label>
+                <input type="text" id="settings-nickname" maxlength="35">
+                <label>О себе</label>
+                <textarea id="settings-about" maxlength="200" rows="3" placeholder="Расскажите о себе..."></textarea>
+                <button class="btn btn-primary btn-sm btn-full" onclick="updateProfile()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px;">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    Сохранить
+                </button>
+            </div>
+        </div>
+        
+        <div class="settings-section">
+            <h4>Информация</h4>
+            
+            <div class="setting-item">
+                <span>Username</span>
+                <div class="setting-value-row">
+                    <span class="setting-value" id="settings-username">@-</span>
+                    <button class="copy-btn-small" onclick="copyToClipboard('settings-username')" title="Копировать">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span>Никнейм</span>
+                <div class="setting-value-row">
+                    <span class="setting-value" id="settings-nickname-display">-</span>
+                    <button class="copy-btn-small" onclick="copyToClipboard('settings-nickname-display')" title="Копировать">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span>ID</span>
+                <div class="setting-value-row">
+                    <span class="setting-value" id="settings-id">-</span>
+                    <button class="copy-btn-small" onclick="copyToClipboard('settings-id')" title="Копировать">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно профиля пользователя -->
+<div class="modal-overlay" id="user-profile-modal-overlay">
+    <div class="user-profile-modal">
+        <button class="modal-close-btn" onclick="closeUserProfileModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+        <div class="profile-modal-avatar">
+            <img src="" alt="" id="modal-user-avatar">
+        </div>
+        <h3 id="modal-user-nickname">-</h3>
+        <div class="modal-user-username" id="modal-user-username">@-</div>
+        <div class="modal-user-about" id="modal-user-about">О себе не указано</div>
+        
+        <div class="modal-user-ids">
+            <div class="copy-field">
+                <span class="copy-label">ID:</span>
+                <span class="copy-value" id="modal-user-id">-</span>
+                <button class="copy-btn" onclick="copyToClipboard('modal-user-id')" title="Копировать">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="copy-field">
+                <span class="copy-label">Username:</span>
+                <span class="copy-value" id="modal-user-username-full">-</span>
+                <button class="copy-btn" onclick="copyToClipboard('modal-user-username-full')" title="Копировать">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <div class="profile-modal-actions">
+            <button class="btn btn-primary btn-full" id="modal-btn-message" onclick="sendMessageToUser()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                Написать сообщение
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="emoji-picker" id="emoji-picker">
+    <div class="emoji-grid">
+        <span class="emoji" onclick="addEmoji('😀')">😀</span>
+        <span class="emoji" onclick="addEmoji('😂')">😂</span>
+        <span class="emoji" onclick="addEmoji('🥰')">🥰</span>
+        <span class="emoji" onclick="addEmoji('😎')">😎</span>
+        <span class="emoji" onclick="addEmoji('👍')">👍</span>
+        <span class="emoji" onclick="addEmoji('🔥')">🔥</span>
+        <span class="emoji" onclick="addEmoji('❤️')">❤️</span>
+        <span class="emoji" onclick="addEmoji('✨')">✨</span>
+        <span class="emoji" onclick="addEmoji('🎉')">🎉</span>
+        <span class="emoji" onclick="addEmoji('🤔')">🤔</span>
+        <span class="emoji" onclick="addEmoji('😅')">😅</span>
+        <span class="emoji" onclick="addEmoji('🙌')">🙌</span>
+        <span class="emoji" onclick="addEmoji('😢')">😢</span>
+        <span class="emoji" onclick="addEmoji('😡')">😡</span>
+        <span class="emoji" onclick="addEmoji('👀')">👀</span>
+        <span class="emoji" onclick="addEmoji('💯')">💯</span>
+    </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<div class="image-viewer-overlay" id="image-viewer">
+    <div class="image-viewer-content">
+        <button class="image-viewer-close" onclick="closeImageViewer()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+        <img src="" alt="" id="image-viewer-img">
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+// ==================== КОНСТАНТЫ ====================
+const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB
+const MAX_FILES_COUNT = 8;
+
+// ==================== ИНИЦИАЛИЗАЦИЯ ====================
+const socket = io();
+const currentUser = JSON.parse(sessionStorage.getItem('user')) || null;
+let pendingFiles = [];
+let users = [];
+let currentRecipientId = null;
+let unreadCounts = {};
+let scrollPositions = {};
+let isAtBottom = true;
+let searchResults = [];
+let searchTimeout = null;
+let selectedUserProfile = null; // Для модального окна профиля
+let isUploading = false;
+
+if (!currentUser) {
+    window.location.href = '/login';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initUI();
+    
+    socket.emit('register_client', {
+        user_id: currentUser.id,
+        username: currentUser.username,
+        nickname: currentUser.nickname || currentUser.username
+    });
+    
+    loadMessages();
+    
+    const searchInput = document.getElementById('user-search');
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => handleUserSearch(e), 300);
+    });
+    searchInput.addEventListener('focus', () => {
+        if (searchInput.value.trim()) {
+            showSearchResults();
+        }
+    });
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-box')) {
+            hideSearchResults();
+        }
+    });
+    
+    const container = document.getElementById('messages-container');
+    container.addEventListener('scroll', () => {
+        const threshold = 100;
+        const position = container.scrollTop + container.clientHeight;
+        const height = container.scrollHeight;
+        isAtBottom = (height - position) < threshold;
+        
+        const roomKey = currentRecipientId === null ? 'global' : currentRecipientId;
+        scrollPositions[roomKey] = container.scrollTop;
+    });
+    
+    document.getElementById('message-input').addEventListener('keypress', e => {
+        if (e.key === 'Enter') sendMessage();
+    });
+    
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#emoji-picker') && !e.target.closest('.btn-emoji')) {
+            document.getElementById('emoji-picker').classList.remove('active');
+        }
+    });
+    
+    document.getElementById('image-viewer').addEventListener('click', (e) => {
+        if (e.target.id === 'image-viewer') {
+            closeImageViewer();
+        }
+    });
+});
+
+// ==================== ПОИСК ПОЛЬЗОВАТЕЛЕЙ ====================
+async function handleUserSearch(e) {
+    const query = e.target.value.trim();
+    
+    if (query.length < 1) {
+        hideSearchResults();
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/users');
+        const allUsers = await res.json();
+        
+        searchResults = allUsers.filter(u => {
+            if (u.id === currentUser.id) return false;
+            
+            const matchesUsername = u.username.toLowerCase().includes(query.toLowerCase());
+            const matchesNickname = (u.nickname || '').toLowerCase().includes(query.toLowerCase());
+            const matchesId = query.match(/^\d+$/) && u.id.toString() === query;
+            const matchesAtUsername = query.startsWith('@') && u.username.toLowerCase().includes(query.slice(1).toLowerCase());
+            
+            return matchesUsername || matchesNickname || matchesId || matchesAtUsername;
+        }).slice(0, 10);
+        
+        showSearchResults();
+    } catch (e) {
+        console.error('Ошибка поиска:', e);
+    }
+}
+
+function showSearchResults() {
+    const resultsContainer = document.getElementById('search-results');
+    
+    if (searchResults.length === 0) {
+        resultsContainer.innerHTML = '<div class="search-no-results">Пользователи не найдены</div>';
+        resultsContainer.style.display = 'block';
+        return;
+    }
+    
+    resultsContainer.innerHTML = searchResults.map(user => `
+        <div class="search-result-item" onclick="startChatWithUser(${user.id})">
+            <img src="${getAvatarUrl(user.avatar, user.id, user.nickname || user.username)}" alt="" class="search-result-avatar">
+            <div class="search-result-info">
+                <div class="search-result-name">${escapeHtml(user.nickname || user.username)}</div>
+                <div class="search-result-username">@${escapeHtml(user.username)} • ID: ${user.id}</div>
+            </div>
+        </div>
+    `).join('');
+    
+    resultsContainer.style.display = 'block';
+}
+
+function hideSearchResults() {
+    const resultsContainer = document.getElementById('search-results');
+    if (resultsContainer) {
+        resultsContainer.style.display = 'none';
+    }
+}
+
+function startChatWithUser(userId) {
+    let existingUser = users.find(u => u.id === userId);
+    
+    if (!existingUser) {
+        const userData = searchResults.find(u => u.id === userId);
+        if (userData) {
+            users.push(userData);
+        }
+    }
+    
+    switchRoom(userId);
+    document.getElementById('user-search').value = '';
+    hideSearchResults();
+}
+
+// ==================== ПОЛЬЗОВАТЕЛИ ====================
+async function loadUsers() {
+    try {
+        const res = await fetch('/api/users');
+        const allUsers = await res.json();
+        users = allUsers.filter(u => u.id !== currentUser.id);
+        renderUsersList();
+    } catch (e) {
+        console.error('Ошибка загрузки пользователей:', e);
+    }
+}
+
+function renderUsersList() {
+    const container = document.getElementById('users-list');
+    container.innerHTML = '';
+
+    const globalItem = createUserListItem({
+        id: null,
+        name: 'Global Room',
+        avatar: null,
+        subtitle: 'Общий чат',
+        isGlobal: true
+    });
+    container.appendChild(globalItem);
+
+    users.forEach(user => {
+        const item = createUserListItem({
+            id: user.id,
+            name: user.nickname || user.username,
+            avatar: user.avatar,
+            subtitle: `@${user.username}`,
+            isGlobal: false
+        });
+        container.appendChild(item);
+    });
+}
+
+function createUserListItem({ id, name, avatar, subtitle, isGlobal }) {
+    const div = document.createElement('div');
+    div.className = `chat-item ${(isGlobal && currentRecipientId === null) || (!isGlobal && currentRecipientId === id) ? 'active' : ''}`;
+    div.setAttribute('data-room', isGlobal ? 'global' : `dm_${id}`);
+    div.onclick = () => switchRoom(isGlobal ? null : id);
+
+    const count = unreadCounts[isGlobal ? 'global' : id] || 0;
+    const badgeHtml = createUnreadBadge(count);
+
+    const avatarHtml = isGlobal ? `
+        <div class="chat-item-avatar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            ${badgeHtml}
+        </div>
+    ` : `
+        <div class="chat-item-avatar">
+            <img src="${getAvatarUrl(avatar, id, name)}" alt="">
+            ${badgeHtml}
+        </div>
+    `;
+
+    div.innerHTML = `
+        ${avatarHtml}
+        <div class="chat-item-info">
+            <div class="chat-item-name">${name}</div>
+            <div class="chat-item-preview">${subtitle}</div>
+        </div>
+    `;
+    return div;
+}
+
+function createUnreadBadge(count) {
+    if (count <= 0) return '';
+    if (count > 9) {
+        return '<span class="unread-badge unread-badge-dot"></span>';
+    }
+    return `<span class="unread-badge">${count}</span>`;
+}
+
+function switchRoom(recipientId) {
+    if (recipientId === currentRecipientId) return;
+
+    const prevRoomKey = currentRecipientId === null ? 'global' : currentRecipientId;
+    const container = document.getElementById('messages-container');
+    scrollPositions[prevRoomKey] = container.scrollTop;
+
+    const roomKey = recipientId === null ? 'global' : recipientId;
+    unreadCounts[roomKey] = 0;
+    currentRecipientId = recipientId;
+
+    if (recipientId === null) {
+        document.getElementById('room-name').textContent = 'Global Room';
+        document.getElementById('room-status').textContent = '@global';
+    } else {
+        const user = users.find(u => u.id === recipientId);
+        if (user) {
+            document.getElementById('room-name').textContent = user.nickname || user.username;
+            document.getElementById('room-status').textContent = `@${user.username}`;
+        }
+    }
+
+    renderUsersList();
+    loadMessages();
+    
+    setTimeout(() => {
+        const savedPosition = scrollPositions[roomKey] || 0;
+        container.scrollTop = savedPosition;
+    }, 50);
+}
+
+// ==================== СООБЩЕНИЯ ====================
+async function loadMessages() {
+    try {
+        const r = await fetch('/api/messages');
+        const msgs = await r.json();
+        const container = document.getElementById('messages-container');
+        container.innerHTML = '';
+
+        const filtered = msgs.filter(m => {
+            if (currentRecipientId === null) return !m.recipient_id;
+            return m.recipient_id === currentRecipientId || (m.user_id === currentRecipientId && m.recipient_id === currentUser.id);
+        });
+
+        if (!filtered.length) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <p>История пуста</p>
+                </div>
+            `;
+            return;
+        }
+        filtered.forEach(m => appendMessage(m, true));
+        
+        const roomKey = currentRecipientId === null ? 'global' : currentRecipientId;
+        const savedPosition = scrollPositions[roomKey];
+        setTimeout(() => {
+            if (savedPosition !== undefined) {
+                container.scrollTop = savedPosition;
+            } else {
+                scrollToBottom();
+            }
+        }, 50);
+    } catch (e) {
+        console.error('Ошибка загрузки:', e);
+    }
+}
+
+function appendMessage(msg, isHistory) {
+    const container = document.getElementById('messages-container');
+    const isOwn = msg.user_id === currentUser.id;
+    
+    let user = users.find(u => u.id === msg.user_id);
+    if (!user && msg.user_id !== currentUser.id) {
+        user = {
+            id: msg.user_id,
+            username: msg.username,
+            nickname: msg.nickname || msg.username,
+            avatar: msg.avatar || null,
+            about_me: msg.about_me || ''
+        };
+        const exists = users.find(u => u.id === msg.user_id);
+        if (!exists) {
+            users.push(user);
+            renderUsersList();
+        }
+    }
+    if (!user) {
+        user = { username: msg.username, nickname: msg.username, avatar: null };
+    }
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${isOwn ? 'outgoing' : 'incoming'}${isHistory ? ' no-animation' : ''}`;
+    messageDiv.id = `msg-${msg.id}`;
+
+    let filesHtml = '';
+    if (msg.files?.length) {
+        filesHtml = '<div class="message-files">';
+        msg.files.forEach(f => {
+            const size = f.file_size > 1024 * 1024
+                ? `${(f.file_size / 1024 / 1024).toFixed(2)} MB`
+                : `${(f.file_size / 1024).toFixed(1)} KB`;
+
+            const isImage = f.file_type === 'image' && !f.filename.toLowerCase().endsWith('.svg');
+
+            if (isImage) {
+                filesHtml += `
+                    <div class="message-file image-file" onclick="openImageViewer('/uploads/files/${f.filename}')">
+                        <img src="/uploads/files/${f.filename}" alt="" onerror="this.parentElement.style.display='none'">
+                    </div>
+                `;
+            } else {
+                let fileIcon = '';
+                if (f.file_type === 'audio') {
+                    fileIcon = `
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+                            <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/>
+                            <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+                        </svg>
+                    `;
+                } else if (f.file_type === 'video') {
+                    fileIcon = `
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="4" width="20" height="16" rx="2"/>
+                            <path d="m9 8 6 4-6 4V8z"/>
+                        </svg>
+                    `;
+                } else {
+                    fileIcon = `
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                            <polyline points="13 2 13 9 20 9"/>
+                        </svg>
+                    `;
+                }
+
+                filesHtml += `
+                    <div class="message-file document-file">
+                        <div class="file-icon-container">
+                            ${fileIcon}
+                        </div>
+                        <div class="file-details">
+                            <div class="file-name">${escapeHtml(f.original_name)}</div>
+                            <div class="file-size">${size}</div>
+                        </div>
+                        <a href="/uploads/files/${f.filename}" download class="file-download-btn" title="Скачать">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </a>
+                    </div>
+                `;
+            }
+        });
+        filesHtml += '</div>';
+    }
+
+    const avatarHtml = !isOwn ? `
+        <img src="${getAvatarUrl(user.avatar, user.id, user.nickname || user.username)}" alt="" class="message-avatar" onclick="openUserProfile(${user.id})">
+    ` : '';
+
+    const nameHtml = !isOwn ? `<span class="message-author" onclick="openUserProfile(${user.id})" style="cursor:pointer;">${escapeHtml(user.nickname || user.username)}</span>` : '';
+
+    messageDiv.innerHTML = `
+        ${avatarHtml}
+        <div class="message-content">
+            ${nameHtml}
+            ${msg.text ? `<div class="message-text">${escapeHtml(msg.text)}</div>` : ''}
+            ${filesHtml}
+            <span class="message-time">${msg.timestamp}</span>
+        </div>
+    `;
+
+    container.appendChild(messageDiv);
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ==================== ОТПРАВКА СООБЩЕНИЙ ====================
+async function sendMessage() {
+    const input = document.getElementById('message-input');
+    const text = input.value.trim();
+    if (!text && pendingFiles.length === 0) return;
+    if (isUploading) {
+        showToast('Дождитесь завершения загрузки файлов', 'error');
+        return;
+    }
+
+    let fileIds = [];
+    if (pendingFiles.length > 0) {
+        fileIds = await uploadPendingFiles();
+    }
+
+    socket.emit('send_message', {
+        user_id: currentUser.id,
+        username: currentUser.username,
+        text: text,
+        files: fileIds,
+        recipient_id: currentRecipientId
+    });
+
+    input.value = '';
+    clearFilePreview();
+}
+
+// ==================== СОКЕТЫ ====================
+socket.on('connect', () => {
+    console.log('✓ Подключено');
+    socket.emit('join_room', { room: `dm_${currentUser.id}` });
+});
+
+socket.on('new_message', msg => {
+    const isForCurrentRoom = 
+        (currentRecipientId === null && !msg.recipient_id) ||
+        (currentRecipientId !== null && (msg.recipient_id === currentRecipientId || (msg.user_id === currentRecipientId && msg.recipient_id === currentUser.id)));
+
+    if (msg.user_id !== currentUser.id && !isForCurrentRoom) {
+        const roomKey = msg.recipient_id ? msg.user_id : 'global';
+        unreadCounts[roomKey] = (unreadCounts[roomKey] || 0) + 1;
+        renderUsersList();
+        
+        if (msg.recipient_id) {
+            const exists = users.find(u => u.id === msg.user_id);
+            if (!exists) {
+                users.push({
+                    id: msg.user_id,
+                    username: msg.username,
+                    nickname: msg.nickname || msg.username,
+                    avatar: msg.avatar || null,
+                    about_me: msg.about_me || ''
+                });
+                renderUsersList();
+            }
+        }
+    }
+
+    if (isForCurrentRoom) {
+        appendMessage(msg, false);
+        
+        if (isAtBottom) {
+            scrollToBottom();
+        }
+        
+        clearEmptyState();
+        if (msg.user_id !== currentUser.id) {
+            const roomKey = currentRecipientId === null ? 'global' : currentRecipientId;
+            unreadCounts[roomKey] = 0;
+            renderUsersList();
+        }
+    }
+});
+
+socket.on('user_typing', data => {
+    const indicator = document.getElementById('typing-indicator');
+    document.getElementById('typing-text').textContent = `${data.username} печатает...`;
+    indicator.classList.add('active');
+    setTimeout(() => indicator.classList.remove('active'), 2000);
+});
+
+// ==================== ФАЙЛЫ ====================
+function handleFileSelect(e) {
+    const newFiles = Array.from(e.target.files);
+    
+    // Проверка на количество файлов
+    if (pendingFiles.length + newFiles.length > MAX_FILES_COUNT) {
+        showToast(`Максимум ${MAX_FILES_COUNT} файлов`, 'error');
+        e.target.value = '';
+        return;
+    }
+    
+    // Проверка размера каждого файла
+    for (const f of newFiles) {
+        if (f.size > MAX_FILE_SIZE) {
+            showToast(`Файл "${f.name}" превышает 500 MB`, 'error');
+            e.target.value = '';
+            return;
+        }
+    }
+    
+    newFiles.forEach(f => {
+        pendingFiles.push(f);
+        addFilePreview(f);
+    });
+    e.target.value = '';
+}
+
+function addFilePreview(f) {
+    const container = document.getElementById('attached-files-preview');
+    container.style.display = 'flex';
+    const card = document.createElement('div');
+    card.className = 'attached-file-card';
+    const size = f.size > 1024 * 1024
+        ? `${(f.size / 1024 / 1024).toFixed(2)} MB`
+        : `${(f.size / 1024).toFixed(1)} KB`;
+
+    let fileIcon = '';
+    const isSvg = f.name.toLowerCase().endsWith('.svg');
+    if (f.type.startsWith('image/') && !isSvg) {
+        fileIcon = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="m21 15-5-5L5 21"/>
+            </svg>
+        `;
+    } else if (f.type.startsWith('audio/')) {
+        fileIcon = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+                <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/>
+            </svg>
+        `;
+    } else if (f.type.startsWith('video/')) {
+        fileIcon = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="4" width="20" height="16" rx="2"/>
+                <path d="m9 8 6 4-6 4V8z"/>
+            </svg>
+        `;
+    } else {
+        fileIcon = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                <polyline points="13 2 13 9 20 9"/>
+            </svg>
+        `;
+    }
+
+    const safeName = escapeHtml(f.name);
+    card.innerHTML = `
+        <div class="attached-file-icon">
+            ${fileIcon}
+        </div>
+        <div class="attached-file-info">
+            <div class="attached-file-name" title="${safeName}">${safeName.length > 25 ? safeName.slice(0, 22) + '...' : safeName}</div>
+            <div class="attached-file-size">${size}</div>
+        </div>
+        <button class="attached-file-remove" onclick="removeFile(this,'${f.name.replace(/'/g, "\\'")}')" title="Удалить">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+    `;
+    container.appendChild(card);
+}
+
+function removeFile(btn, name) {
+    pendingFiles = pendingFiles.filter(f => f.name !== name);
+    btn.parentElement.remove();
+    if (!pendingFiles.length) {
+        document.getElementById('attached-files-preview').style.display = 'none';
+        document.getElementById('attached-files-preview').innerHTML = '';
+    }
+}
+
+function clearFilePreview() {
+    pendingFiles = [];
+    document.getElementById('attached-files-preview').innerHTML = '';
+    document.getElementById('attached-files-preview').style.display = 'none';
+}
+
+async function uploadPendingFiles() {
+    const ids = [];
+    const totalFiles = pendingFiles.length;
+    let uploadedCount = 0;
+    
+    isUploading = true;
+    document.getElementById('upload-progress-container').style.display = 'block';
+    document.getElementById('btn-send').disabled = true;
+    document.getElementById('btn-send').style.opacity = '0.5';
+    
+    for (const f of pendingFiles) {
+        const fd = new FormData();
+        fd.append('file', f);
+        fd.append('user_id', String(currentUser.id));
+        
+        try {
+            const r = await fetch('/api/upload', { method: 'POST', body: fd });
+            const d = await r.json();
+            if (d.success) {
+                ids.push(d.file_id);
+            } else {
+                console.error('Ошибка загрузки файла:', d.error);
+                showToast('Ошибка: ' + (d.error || 'Не удалось загрузить файл'), 'error');
+            }
+        } catch (e) { 
+            console.error('Ошибка сети:', e);
+            showToast('Ошибка сети при загрузке файла', 'error');
+        }
+        
+        uploadedCount++;
+        const progress = Math.round((uploadedCount / totalFiles) * 100);
+        document.getElementById('upload-progress-fill').style.width = `${progress}%`;
+        document.getElementById('upload-progress-text').textContent = `${progress}%`;
+    }
+    
+    isUploading = false;
+    setTimeout(() => {
+        document.getElementById('upload-progress-container').style.display = 'none';
+        document.getElementById('btn-send').disabled = false;
+        document.getElementById('btn-send').style.opacity = '1';
+        document.getElementById('upload-progress-fill').style.width = '0%';
+        document.getElementById('upload-progress-text').textContent = '0%';
+    }, 1000);
+    
+    return ids;
+}
+
+// ==================== ПРОФИЛЬ И НАСТРОЙКИ ====================
+function initUI() {
+    const nickname = currentUser.nickname || currentUser.username || '';
+    document.getElementById('current-user-nickname').textContent = nickname;
+    document.getElementById('settings-nickname').value = nickname;
+    document.getElementById('settings-nickname-display').textContent = nickname || 'Не указан';
+    document.getElementById('settings-username').textContent = '@' + currentUser.username;
+    document.getElementById('settings-id').textContent = currentUser.id;
+    document.getElementById('settings-about').value = currentUser.about_me || '';
+    updateAvatarUI(currentUser.avatar);
+}
+
+function getAvatarUrl(af, uid = null, nick = '') {
+    if (af && af !== 'default.png' && af !== 'null') {
+        return `/uploads/avatars/${af}?t=${Date.now()}`;
+    }
+    const letter = nick ? nick.charAt(0).toUpperCase() : '?';
+    const colors = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+    const color = colors[(uid || 0) % colors.length];
+    return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='${encodeURIComponent(color)}' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3E${letter}%3C/text%3E%3C/svg%3E`;
+}
+
+function updateAvatarUI(af) {
+    const url = getAvatarUrl(af, currentUser.id, currentUser.nickname || currentUser.username);
+    document.getElementById('current-user-avatar').src = url;
+    document.getElementById('settings-avatar').src = url;
+}
+
+function toggleSettings() {
+    document.getElementById('settings-panel').classList.toggle('active');
+    document.getElementById('overlay').classList.toggle('active');
+}
+
+async function uploadAvatar(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('avatar', file);
+    fd.append('user_id', currentUser.id);
+    const r = await fetch('/api/profile/update', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.success) {
+        currentUser.avatar = d.avatar;
+        sessionStorage.setItem('user', JSON.stringify(currentUser));
+        initUI();
+        showToast('Аватар обновлён!', 'success');
+    }
+}
+
+async function updateProfile() {
+    const fd = new FormData();
+    fd.append('user_id', currentUser.id);
+    fd.append('nickname', document.getElementById('settings-nickname').value);
+    fd.append('about_me', document.getElementById('settings-about').value);
+    const r = await fetch('/api/profile/update', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.success) {
+        currentUser.nickname = d.nickname;
+        currentUser.about_me = d.about_me;
+        sessionStorage.setItem('user', JSON.stringify(currentUser));
+        document.getElementById('current-user-nickname').textContent = d.nickname || d.username;
+        document.getElementById('settings-nickname-display').textContent = d.nickname || 'Не указан';
+        showToast('Профиль обновлён!', 'success');
+    }
+}
+
+async function logout() {
+    await fetch('/api/logout', { method: 'POST' });
+    sessionStorage.removeItem('user');
+    window.location.href = '/login';
+}
+
+// ==================== МОДАЛЬНОЕ ОКНО ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ ====================
+function openUserProfile(userId) {
+    const user = users.find(u => u.id === userId) || users.find(u => u.id === userId);
+    if (!user) {
+        console.error('Пользователь не найден:', userId);
+        return;
+    }
+    
+    selectedUserProfile = user;
+    
+    document.getElementById('modal-user-avatar').src = getAvatarUrl(user.avatar, user.id, user.nickname || user.username);
+    document.getElementById('modal-user-nickname').textContent = user.nickname || user.username;
+    document.getElementById('modal-user-username').textContent = '@' + user.username;
+    document.getElementById('modal-user-username-full').textContent = user.username;
+    document.getElementById('modal-user-id').textContent = user.id;
+    document.getElementById('modal-user-about').textContent = user.about_me || 'О себе не указано';
+    
+    document.getElementById('user-profile-modal-overlay').classList.add('active');
+}
+
+function closeUserProfileModal() {
+    document.getElementById('user-profile-modal-overlay').classList.remove('active');
+    selectedUserProfile = null;
+}
+
+function sendMessageToUser() {
+    if (!selectedUserProfile) return;
+    
+    switchRoom(selectedUserProfile.id);
+    closeUserProfileModal();
+    document.getElementById('message-input').focus();
+}
+
+// Закрытие модального окна по клику вне
+document.getElementById('user-profile-modal-overlay').addEventListener('click', (e) => {
+    if (e.target.id === 'user-profile-modal-overlay') {
+        closeUserProfileModal();
+    }
+});
+
+// ==================== ЭМОДЗИ И УВЕДОМЛЕНИЯ ====================
+function toggleEmojiPicker() {
+    document.getElementById('emoji-picker').classList.toggle('active');
+}
+
+function addEmoji(emoji) {
+    const input = document.getElementById('message-input');
+    input.value += emoji;
+    input.focus();
+    document.getElementById('emoji-picker').classList.remove('active');
+}
+
+function copyToClipboard(elementId) {
+    const text = document.getElementById(elementId).textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Скопировано!', 'success');
+    }).catch(() => {
+        showToast('Ошибка копирования', 'error');
+    });
+}
+
+function showToast(msg, type = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function scrollToBottom() {
+    const container = document.getElementById('messages-container');
+    container.scrollTop = container.scrollHeight;
+}
+
+function clearEmptyState() {
+    const empty = document.querySelector('.empty-state');
+    if (empty) empty.remove();
+}
+
+function openImageViewer(src) {
+    document.getElementById('image-viewer-img').src = src;
+    document.getElementById('image-viewer').classList.add('active');
+}
+
+function closeImageViewer() {
+    document.getElementById('image-viewer').classList.remove('active');
+}
+</script>
+{% endblock %}

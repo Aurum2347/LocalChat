@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Регистрация - LocalChat{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">{% endblock %}
+{% block content %}
+<div class="auth-page">
+    <div class="auth-container">
+        <div class="auth-logo">
+            <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            <h1>LocalChat</h1><p>Создать аккаунт</p>
+        </div>
+        <form class="auth-form" id="register-form">
+            <div class="form-group">
+                <label>Username</label>
+                <div class="input-with-prefix">
+                    <span class="input-prefix">@</span>
+                    <input type="text" id="username" required placeholder="username" minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]+" autocomplete="off">
+                </div>
+                <small>Латиница, цифры, _ (3-20)</small>
+            </div>
+            <div class="form-group">
+                <label>Никнейм</label>
+                <input type="text" id="nickname" placeholder="Как вас называть" maxlength="35">
+                <small>Отображаемое имя (опционально)</small>
+            </div>
+            <div class="form-group"><label>Пароль</label><input type="password" id="password" required placeholder="••••••••" minlength="4"></div>
+            <div class="form-group"><label>Подтвердите пароль</label><input type="password" id="confirm-password" required placeholder="••••••••"></div>
+            <div class="checkbox-group">
+                <label class="custom-checkbox"><input type="checkbox" id="terms" required><span class="checkmark"></span><span class="checkbox-text">Я принимаю <a href="{{ url_for('main.terms') }}" target="_blank">пользовательское соглашение</a></span></label>
+            </div>
+            <div class="error-message" id="error-message"></div>
+            <button type="submit" class="btn-primary" id="submit-btn">Создать аккаунт</button>
+        </form>
+        <div class="auth-footer"><p>Уже есть аккаунт? <a href="{{ url_for('main.login') }}">Войти</a></p></div>
+    </div>
+</div>
+<script>
+document.getElementById('register-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value.trim();
+    const nickname = document.getElementById('nickname').value.trim();
+    const password = document.getElementById('password').value;
+    const cp = document.getElementById('confirm-password').value;
+    const terms = document.getElementById('terms').checked;
+    const errorEl = document.getElementById('error-message');
+    const btn = document.getElementById('submit-btn');
+    if (password !== cp) { errorEl.textContent = 'Пароли не совпадают'; return; }
+    if (!terms) { errorEl.textContent = 'Примите соглашение'; return; }
+    errorEl.textContent = ''; btn.disabled = true; btn.textContent = 'Создание...';
+    try {
+        const res = await fetch('/api/register', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username, nickname, password})});
+        const data = await res.json();
+        if (data.success) {
+            sessionStorage.setItem('user', JSON.stringify({id: data.id, username: data.username, nickname: data.nickname || data.username, about_me: '', avatar: 'default.png'}));
+            window.location.href = '/chat';
+        } else { errorEl.textContent = data.error || 'Ошибка'; btn.disabled = false; btn.textContent = 'Создать аккаунт'; }
+    } catch { errorEl.textContent = 'Ошибка соединения'; btn.disabled = false; btn.textContent = 'Создать аккаунт'; }
+});
+</script>
+{% endblock %}

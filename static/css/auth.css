@@ -1,0 +1,333 @@
+/* ========================================
+   LocalChat - Auth Styles (v2.0)
+   ======================================== */
+
+/* === ОСНОВНАЯ СТРАНИЦА === */
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--bg-primary);
+    background-image:
+        radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 80% 70%, rgba(236, 72, 153, 0.1) 0%, transparent 40%);
+    padding: 20px;
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 420px;
+    padding: 40px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* === ЛОГОТИП === */
+.auth-logo {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.logo-icon {
+    width: 64px;
+    height: 64px;
+    color: var(--accent);
+    margin-bottom: 15px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+    }
+}
+
+.auth-logo h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: var(--text-primary);
+}
+
+.auth-logo p {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+/* === ФОРМА === */
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group small {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: -4px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"] {
+    padding: 14px 16px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 15px;
+    transition: all 0.2s;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="password"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+/* === INPUT С ПРЕФИКСОМ @ === */
+.input-with-prefix {
+    display: flex;
+    align-items: center;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+.input-with-prefix:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.input-prefix {
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+    padding: 14px 16px;
+    font-weight: 600;
+    font-size: 15px;
+    border-right: 1px solid var(--border-color);
+    user-select: none;
+}
+
+.input-with-prefix input {
+    flex: 1;
+    padding: 14px 16px;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 15px;
+}
+
+.input-with-prefix input:focus {
+    outline: none;
+}
+
+/* === ЧЕКБОКС === */
+.checkbox-group {
+    margin: 5px 0 10px;
+}
+
+.custom-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
+
+.custom-checkbox input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.custom-checkbox .checkmark {
+    position: relative;
+    flex-shrink: 0;
+    height: 22px;
+    width: 22px;
+    background-color: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.custom-checkbox .checkmark::after {
+    content: "";
+    position: absolute;
+    display: none;
+    left: 6px;
+    top: 2px;
+    width: 6px;
+    height: 12px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.custom-checkbox:hover .checkmark {
+    border-color: var(--accent);
+    background-color: rgba(99, 102, 241, 0.1);
+}
+
+.custom-checkbox input:checked ~ .checkmark {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+.custom-checkbox input:checked ~ .checkmark::after {
+    display: block;
+}
+
+.custom-checkbox .checkbox-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.custom-checkbox .checkbox-text a {
+    color: var(--accent);
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.custom-checkbox .checkbox-text a:hover {
+    text-decoration: underline;
+    color: var(--accent-hover);
+}
+
+/* === ОШИБКИ === */
+.error-message {
+    color: var(--danger);
+    font-size: 13px;
+    min-height: 20px;
+    margin: 5px 0;
+    animation: shake 0.4s ease;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* === ФУТЕР === */
+.auth-footer {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.auth-footer p {
+    margin: 6px 0;
+}
+
+.auth-footer a,
+.terms-link {
+    color: var(--accent);
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.auth-footer a:hover,
+.terms-link:hover {
+    text-decoration: underline;
+    color: var(--accent-hover);
+}
+
+/* === КНОПКИ === */
+.btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.btn-primary:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* === АДАПТИВНОСТЬ === */
+@media (max-width: 480px) {
+    .auth-container {
+        padding: 30px 20px;
+        border-radius: 16px;
+    }
+    
+    .auth-logo h1 {
+        font-size: 24px;
+    }
+    
+    .form-group input[type="text"],
+    .form-group input[type="password"] {
+        padding: 12px 14px;
+        font-size: 14px;
+    }
+    
+    .btn-primary {
+        padding: 12px;
+        font-size: 14px;
+    }
+}
